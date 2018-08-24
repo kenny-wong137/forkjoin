@@ -11,7 +11,7 @@ public class Pool {
 
     private EvalSampler externalSampler; // to/from which external threads dump/find tasks
     private Worker[] workers;
-    private boolean terminated = false;
+    private volatile boolean terminated = false;
 
     /**
      * Constructor

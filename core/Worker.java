@@ -3,7 +3,7 @@ package core;
 class Worker implements Runnable {
 
     private EvalSampler sampler; // to/from which this worker dumps/finds tasks
-    private boolean isTerminated = false;
+    private volatile boolean isTerminated = false;
 
     Worker(EvalSampler sampler) {
         this.sampler = sampler;
