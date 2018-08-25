@@ -17,6 +17,8 @@ public class FastSum {
             this.list = list;
         }
 
+        private static final int MIN_SPLIT_SIZE = 1; // in a more sensible application, this would be higher
+
         @Override
         public Long compute() {
 
@@ -24,7 +26,7 @@ public class FastSum {
                 return 0L;
             }
 
-            if (list.size() > 1) {
+            if (list.size() > MIN_SPLIT_SIZE) {
                 SumTask leftSubtask = new SumTask(list.subList(0, list.size() / 2));
                 SumTask rightSubtask = new SumTask(list.subList(list.size() / 2, list.size()));
                 rightSubtask.fork();
@@ -33,7 +35,11 @@ public class FastSum {
                 return leftSum + rightSum;
             }
             else {
-                return (long) list.get(0);
+                long sum = 0;
+                for (Integer value : list) {
+                    sum += value;
+                }
+                return sum;
             }
         }
     }
@@ -42,7 +48,7 @@ public class FastSum {
         List<Integer> myList = IntStream.range(0, 100000000).boxed().collect(Collectors.toList());
         SumTask fullTask = new SumTask(myList);
 
-        for (int i = 0; i < 25; i++) {
+        for (int i = 0; i < 2000; i++) {
             long startTime = System.currentTimeMillis();
             Pool pool = new Pool(3);
             Long answer = pool.invoke(fullTask);
@@ -54,5 +60,6 @@ public class FastSum {
             System.out.println("Time: " + (endTime - startTime));
         }
     }
+
 
 }
