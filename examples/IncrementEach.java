@@ -64,7 +64,7 @@ public class IncrementEach {
 
         Pool pool = new Pool(3);
 
-        int numIters = 5000;
+        int numIters = 50000;
         for (int i = 0; i < numIters; i++) {
             System.out.println("Iteration " + i);
             pool.invoke(fullTask);
