@@ -45,6 +45,7 @@ public class FastSum {
     }
 
     public static void main(String[] args) {
+
         List<Integer> myList = IntStream.range(0, 100000000).boxed().collect(Collectors.toList());
         SumTask fullTask = new SumTask(myList);
 

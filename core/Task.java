@@ -23,10 +23,10 @@ abstract public class Task<V> {
      * (Must be called from within a fork-join pool.)
      */
     public void fork() {
-        Evaluation<V> evalJob = new Evaluation<>(this);
-        evalAttempts.offerLast(evalJob);
+        Evaluation<V> evalOfThisTask = new Evaluation<>(this);
+        evalAttempts.offerLast(evalOfThisTask);
         // Add to the current thread's job queue.
-        ThreadManager.getSamplerForThread().add(evalJob);
+        ThreadManager.getSamplerForThread().add(evalOfThisTask);
     }
 
     /**
@@ -39,17 +39,17 @@ abstract public class Task<V> {
      * @return The result of evaluating the task.
      */
     public V join() {
-        Evaluation<V> evalJob = evalAttempts.pollLast();
-        if (evalJob != null) {
-            while (!evalJob.isComplete()) {
+        Evaluation<V> evalOfThisTask = evalAttempts.pollLast();
+        if (evalOfThisTask != null) {
+            while (!evalOfThisTask.isComplete()) {
                 // If the result is not yet available, then work on other jobs from this thread's queue
                 // (or if this thread's queue is empty, then steal jobs from other queues from within the same pool)
-                Evaluation<?> otherEvalJob = ThreadManager.getSamplerForThread().get();
-                if (otherEvalJob != null) {
-                    otherEvalJob.runComputation();
+                Evaluation<?> evalOfAnotherTask = ThreadManager.getSamplerForThread().get();
+                if (evalOfAnotherTask != null) {
+                    evalOfAnotherTask.runComputation();
                 }
             }
-            return evalJob.getAnswer();
+            return evalOfThisTask.getAnswer();
         } else {
             throw new IllegalStateException("Task has been joined more times than it has been forked.");
         }
