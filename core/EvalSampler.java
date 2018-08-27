@@ -1,23 +1,34 @@
 package core;
 
 // An EvalSampler object belongs either to one worker, or to the external threads.
-// This object takes care of the way in which the worker dumps/finds new jobs (including stealing from other workers)
+// This object takes care of the way in which the worker dumps/finds new jobs (including stealing from other workers).
 class EvalSampler {
 
-    private EvalQueue ownQueue; // belongs to current worker (or to the external workers, if this is the external sampler)
-    private EvalQueue[] otherQueues; // queues from which the current worker can steal jobs, if its own queue is empty
+    // Job queue belonging to current worker
+    private EvalQueue ownQueue;
+
+    // Job queues owned by other workers, from which the current worker can steal jobs, if its own queue is empty.
+    // NB stealing is always attempted in sequential order, i.e. if the worker can't find a job from its ownQueue,
+    // then it tries otherQueues[0], then otherQueues[1], then otherQueues[2], etc.
+    private EvalQueue[] otherQueues;
+
 
     EvalSampler(EvalQueue ownQueue, EvalQueue[] otherQueues) {
         this.ownQueue = ownQueue;
         this.otherQueues = otherQueues;
     }
 
+    // Called when the worker forks a task.
+    // Any new evaluation jobs forked by the current worker go in the worker's own queue.
     void add(Evaluation<?> evalJob) {
-        // Any new evaluation jobs forked by the current worker go in the worker's own queue.
         ownQueue.add(evalJob);
     }
 
+    // Called when a worker is looking for a new task to do.
+    // Also called when a worker is joining a task that hasn't completed, and is trying to find a different task
+    // to get on with in the meantime.
     Evaluation<?> get() {
+
         // First, try to get a job from the worker's own queue.
         Evaluation<?> evalJob = ownQueue.get();
         if (evalJob != null) {
@@ -32,7 +43,7 @@ class EvalSampler {
             }
         }
 
-        // No evaluation jobs found anywhere - return null after a short pause
+        // No evaluation jobs found anywhere - return null.
         return null;
     }
 
