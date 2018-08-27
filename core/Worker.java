@@ -25,10 +25,19 @@ class Worker implements Runnable {
 
         // Runs until notified that the pool is terminated.
         while (!isTerminated) {
+            // Sample a job from this workers' queue (or, if its queue is empty, then try to steal from another worker.)
             Evaluation<?> evalJob = sampler.get();
 
             if (evalJob != null) {
+                // Case: successfully found a job - proceed with computation of this job.
                 evalJob.runComputation();
+            }
+            else {
+                /*
+                 TODO: Ideally the thread should wait here, until either it is notified that a new evaluation job has
+                 been forked, or until it is notified that the thread-pool has been terminated.
+                 (At the moment, the thread just goes round and round the while loop, occupying a CPU unnecessarily.)
+                 */
             }
         }
 

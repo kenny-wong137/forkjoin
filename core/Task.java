@@ -79,12 +79,22 @@ abstract public class Task<V> {
         if (evalOfThisTask != null) {
 
             while (!evalOfThisTask.isComplete()) {
-                // If the result is not yet available, then work on other jobs from this thread's queue in the meantime
-                // (or if this thread's queue is empty, then steal jobs from other queues from within the same pool)
+
+                // If the result is not yet available, then try to work on another job from the current thread's queue
+                // in the meantime (or if this thread's queue is empty, then try to steal a job from another queues
+                // from within the same pool)
                 Evaluation<?> evalOfAnotherTask = ThreadManager.getSamplerForThread().get();
 
                 if (evalOfAnotherTask != null) {
+                    // Case: successfully found another job to work on in the meantime - proceed with computation.
                     evalOfAnotherTask.runComputation();
+                }
+                else {
+                    /*
+                     TODO: Ideally the thread should wait here, until either it is notified that a new evaluation job
+                     has been forked, or until it is notified that the evaluation of the present task is complete.
+                     (At the moment, the thread just goes round and round the while loop.)
+                     */
                 }
             }
 

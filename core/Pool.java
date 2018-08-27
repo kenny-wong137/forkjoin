@@ -12,13 +12,15 @@ package core;
  * If a worker is looking for a new job but its job queue is empty, then it will try to steal jobs from other workers'
  * queues. (Note that workers access their own queues at the front, but steal from other queues at the back.)
  *
- * There is also an external job queue, owned collectively by all the external threads that have submit tasks to this
- * pool. (External threads effectively operate as a part of the pool, just like a genuine pool worker, until the tasks
- * they submitted are complete, at which point they drop out from the pool. In particular, external threads can
- * steal from the queues owned by internal workers.)
+ * There is also an external job queue, owned collectively by all the external threads that have submitted tasks to this
+ * pool by calling the invoke method. (External threads effectively operate as a part of the pool, just like a genuine
+ * pool worker, until the tasks they submitted are complete, at which point they drop out from the pool. In particular,
+ * external threads can steal from the queues owned by internal workers.)
  *
- * The workers in the pool will continue to be active, constantly looking for new tasks to do, until the pool is
- * terminated.
+ * WARNING: In the current (very basic!!!) implementation, the workers in the pool start actively searching for jobs to
+ * do as soon as the pool is created, and continue actively searching for jobs until the pool is terminated by
+ * calling the terminate method. This means that each worker will occupy a CPU constantly from the time the pool is
+ * created to the time the pool is terminated.
  */
 public class Pool {
 
