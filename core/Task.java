@@ -16,18 +16,28 @@ abstract public class Task<V> {
     //  retrieve the result of the last fork, and so on.)
     private final Deque<Evaluation<V>> evalAttempts = new ConcurrentLinkedDeque<>();
 
-
     /**
-     * Compute the result of the evaluation.
+     * Computes the result of the evaluation.
      * This method defines the computation, and should be overwritten in subclasses.
+     *
+     * The compute() method should only be called from within a pool. Typically, the compute() method carries out the
+     * computation using a divide-and-conquer approach. If the task is big, then it breaks down into two sub-tasks.
+     * It works on one of the sub-tasks synchronously by calling its compute() method.
+     * Meanwhile, it sends the other sub-task for asynchronous computation in the pool by calling its
+     * fork() method, and obtains the result of this asynchronous computation by calling its join() method.
+     * The results of the two sub-tasks are then combined to give a final answer.
+     *
+     * (If we're outside of a pool and we wish to submit a task to the pool for computation, then we should NOT call
+     *  task.compute() directly - instead, we should call pool.invoke(task).)
+     *
      * @return The result of the computation.
      *         (This can be null, with the type V = Void, if the computation is merely an action.)
      */
     abstract public V compute();
 
-
     /**
      * Adds this task to the current worker's job queue, to be computed asynchronously.
+     *
      * This method should only be called from within a fork-join pool.
      *
      * The implementation guarantees a happens-before relationship between the forking thread entering the .fork() call
@@ -48,15 +58,15 @@ abstract public class Task<V> {
         ThreadManager.getSamplerForThread().add(evalOfThisTask);
     }
 
-
     /**
      * Retrieves the result of an asynchronous evaluation of this task, triggered by a previous fork call.
-     * If the result is unavailable, then the current thread will in the meantime work on other jobs in its job queue,
+     * If the result is unavailable, then the current thread will on other jobs in its job queue in the meantime,
      * or steal from other workers' queues if its own queue is empty, until the result becomes available.
      *
      * In case of multiple fork/join calls on a single task, the successive join calls retrieve the results of the
      * evaluations of previous fork calls in last-in-first-out order. (For this to make sense, it is necessary that the
-     * number of join calls made on a given task never exceeds the number of fork calls.)
+     * number of join calls made on a given task never exceeds the number of fork calls. An exception will be thrown
+     * if this is violated.)
      *
      * The join method should only be called from within a fork-join pool.
      *
@@ -73,17 +83,19 @@ abstract public class Task<V> {
     public V join() {
 
         // Retrieve an evaluation attempt of this task from the stack of all evaluation attempts of this task
-        // that have previously been forked.
+        // that were created by calling .fork() on this task.
         Evaluation<V> evalOfThisTask = evalAttempts.pollLast();
+
         EvalSampler sampler = null;
 
         if (evalOfThisTask != null) {
 
+            // Loop runs until the result of the evaluation of the task that we're interested in is available.
             while (!evalOfThisTask.isComplete()) {
 
                 // If the result is not yet available, then try to work on another job from the current thread's queue
                 // in the meantime (or if this thread's queue is empty, then try to steal a job from another queues
-                // from within the same pool)
+                // from within the same pool).
 
                 if (sampler == null) {
                     sampler = ThreadManager.getSamplerForThread();
@@ -92,20 +104,19 @@ abstract public class Task<V> {
                 Evaluation<?> evalOfAnotherTask = sampler.get();
 
                 if (evalOfAnotherTask != null) {
-                    // Case: successfully found another job to work on in the meantime - proceed with computation.
+                    // Successfully found another job to work on in the meantime - proceed with computation.
                     evalOfAnotherTask.runComputation();
                 }
 
                 /*
-                 IMPROVE: Ideally the thread should wait here, until either it is notified that a new evaluation job
-                 has been forked, or until it is notified that the evaluation of the present task is complete.
-                 (At the moment, the thread just cycles the while loop, broken only by the periodic sleeps in
-                  the sampler.get() method.)
+                 To improve in future: Ideally the thread should wait here, until either it is notified that a new
+                 evaluation job has been forked, or until it is notified that the evaluation of the present task is
+                 complete. (At the moment, the thread just cycles the while loop, broken only by the periodic sleeps in
+                 the sampler.get() method.)
                  */
             }
 
-            // Once the result of the evaluation of the present task is available,
-            // then we are ready to return the answer.
+            // Evaluation of present task is now available - return answer.
             return evalOfThisTask.getAnswer();
         }
         else {

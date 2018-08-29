@@ -1,18 +1,23 @@
 package core;
 
 // An *async* evaluation of a task, triggered by forking.
-// (Since we allow a task to be forked multiple times, it is possible for multiple Evaluation objects to refer to
+// (Since we allow a task to be forked multiple times, it is possible for multiple Evaluation objects to be created from
 //  a single task.)
 class Evaluation<V> {
 
-    private final Task<V> task; // a reference to the description of the task to be evaluated.
-    private volatile boolean completionStatus = false; // will become true once the evaluation is complete.
-    private V answer; // will equal the result of the evaluation once the evaluation is complete
+    // A reference to the task to be evaluated.
+    private final Task<V> task;
 
-    // NB no need to mark "answer" as volatile, since "answer" is always read after a reading the volatile variable
-    // "completionStatus" - see the extended comment below.
+    // Status of computation - will become true once the evaluation is complete;
+    // also involved in memory synchronisation between thread caches.
+    private volatile boolean completionStatus = false;
 
+    // Result of evaluation - will be initialised once the evaluation is complete.
+    private V answer;
+    // (NB no need to mark "answer" as volatile, since "answer" is always read after a reading
+    // the volatile variable "completionStatus" - see the extended comment below.)
 
+    // Constructor.
     Evaluation(Task<V> task) {
         this.task = task;
     }
@@ -33,21 +38,37 @@ class Evaluation<V> {
         return answer;
     }
 
-
     /*
      Note about happens-before relationships:
-     (1) Actions done by the forking thread prior to the forking *happen-before* the evaluation of this Evaluation job
-         by the evaluating thread.
-         [This is because the forking thread adds the Evaluation job to its ConcurrentLinkedDeque of tasks during
-         the fork. The evaluating thread then gets/steals the job from this ConcurrentLinkedDeque, before starting to
-         run the computation. According to the docs for the java.util.concurrent package, all concurrent containers
-         are implemented in such a way that there is a happens-before relationship between adding an object to the
-         container and retrieving the same object from the container.]
 
-     (2) The evaluation of this job and the recording of the answer by the evaluating thread *happens-before*
-         the joining of this job by the thread doing the join.
-         [This is because the evaluating thread performs the computation and writes the answer before writing to
-         the volatile variable completionStatus; the joining thread then reads this volatile variable verifying that
-         the evaluation is complete before retrieving the answer.]
-     */
+     (1) The forking of the task by the forking thread *happens-before* the evaluation of this Evaluation job
+         by the evaluating thread.
+
+         [To spell it out:
+         - forking thread entering its fork call
+             ... happens-before ...        [due to program order within a single thread)
+         - forking thread adding the newly-created Evaluation object to the ConcurrentLinkedDeque inside the EvalQueue
+             ... happens-before ...        [see documentation for the containers in the java.util.concurrent package]
+         - evaluating thread retrieves the Evaluation object from the ConcurrentLinkedDeque from within the EvalQueue
+             ... happens-before ...        [due to program oder within a single thread]
+         - evaluating thread entering the call of runComputation
+         ]
+
+
+     (2) The evaluation of this job by the evaluating thread and the recording of the answer *happen-before*
+         the joining of this task by the thread doing the join.
+
+         [To spell it out:
+         - evaluating thread writing the result of the computation to this.answer
+             ... happens-before ...        [due to program order within a single thread]
+         - evaluating thread writing this.completionStatus = true
+             ... happens-before ...        [due to this.completionStatus being volatile]
+         - joining thread reading this.completionStatus
+             ... happens-before ...        [due to program order within a single thread]
+         - joining thread reading the value of this.answer
+             ... happens-before ...        [due to program order within a single thread]
+         - joining thread exits its join call
+         ]
+      */
+
 }

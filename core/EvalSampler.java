@@ -1,20 +1,22 @@
 package core;
 
-// An EvalSampler object belongs either to one worker, or to the external threads.
-// This object takes care of the way in which the worker dumps/finds new jobs (including stealing from other workers).
+// An EvalSampler object either belongs to one single pool worker, or is shared by all the external threads.
+// This object takes care of the way in which its owning thread(s) dumps/finds new jobs, including the possibility
+// of stealing jobs from other threads' queues.
 class EvalSampler {
 
-    // Job queue belonging to current worker
+    // Job queue belonging to worker who owns this EvalSampler object.
     private final EvalQueue ownQueue;
 
-    // Job queues owned by other workers, from which the current worker can steal jobs, if its own queue is empty.
+    // Job queues owned by other workers, from which the current worker can steal jobs if its own queue is empty.
     // NB stealing is always attempted in sequential order, i.e. if the worker can't find a job from its ownQueue,
     // then it tries otherQueues[0], then otherQueues[1], then otherQueues[2], etc.
     private final EvalQueue[] otherQueues;
 
-    private final int sleepNanos; // period of time to sleep if no tasks found.
+    // Period of time to sleep, if no jobs found.
+    private final int sleepNanos;
 
-
+    // Constructor
     EvalSampler(EvalQueue ownQueue, EvalQueue[] otherQueues, int sleepNanos) {
         this.ownQueue = ownQueue;
         this.otherQueues = otherQueues;
@@ -27,8 +29,8 @@ class EvalSampler {
         ownQueue.add(evalJob);
     }
 
-    // Called when a worker is looking for a new task to do.
-    // Also called when a worker is joining a task that hasn't completed, and is trying to find a different task
+    // Called when a worker is looking for a new task to start after completing its previous one.
+    // Also called when a worker is joining on task that hasn't yet completed, and is trying to find a different task
     // to get on with in the meantime.
     Evaluation<?> get() {
 
@@ -51,7 +53,7 @@ class EvalSampler {
             Thread.sleep(0, sleepNanos);
         }
         catch (InterruptedException ex) {
-            // Ignore this exception - continue as usual
+            // Ignore this exception - continue as usual.
         }
         return null;
     }

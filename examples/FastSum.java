@@ -52,7 +52,7 @@ public class FastSum {
         List<Integer> myList = IntStream.range(0, 10000000).boxed().collect(Collectors.toList());
         SumTask fullTask = new SumTask(myList);
 
-        Pool pool = new Pool(3);
+        Pool pool = new Pool();
 
         for (int i = 0; i < 20; i++) {
             System.out.println("Iteration: " + i);
