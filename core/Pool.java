@@ -17,26 +17,27 @@ package core;
  * pool worker, until the tasks they submitted are complete, at which point they drop out from the pool. In particular,
  * external threads can steal from the queues owned by internal workers.
  *
- * In this implementation, the pool workers are "semi-alive" from the time the pool is initialised to the time the pool
- * is terminated by calling the terminate method. To be more specific, the workers will continually look for new jobs
- * from the job queues. If a worker comes a complete circuit of all job queues and fails to find a job, it sleeps
- * for a given period of time (currently set to 10 microseconds by default, but can be customised), before starting its
- * next circuit of the job queues.
+ * In this implementation, the pool workers are alive from the time the pool is initialised until the time the pool is
+ * terminated by calling the terminate method. Between initialisation and termination, the workers continually cycle
+ * through the job queues, looking for new jobs to work on, with the exception that, if a worker comes a complete
+ * circuit of all job queues and fails to find a job, it sleeps for a specified period of time (the default time being
+ * 10 microseconds), before starting its next circuit of the job queues.
  */
 public class Pool {
 
     // Sampler object, used by the external workers to dump forked tasks and find pending tasks.
-    private final EvalSampler externalSampler;
+    private final AsyncEvalSampler externalSampler;
 
     // Status marker - will become "true" when the terminate method is called.
-    private volatile boolean terminated = false;
+    private volatile boolean terminationStatus = false;
 
-    // Default duration of sleep - for when a thread fails to find a new job.
+    // Default duration of sleep
+    // - relevant for when a thread fails to find a new job after a completing a full circuit of the queues.
     private static final int DEFAULT_SLEEP_NANOS = 10000;
 
     // Reads the status marker - only called by the internal workers.
     boolean isTerminated() {
-        return terminated;
+        return terminationStatus;
     }
 
     /**
@@ -45,7 +46,7 @@ public class Pool {
      *                   external calling thread also participates in the pool's activity.)
      * @param sleepNanos The period of time for which a thread will sleep, if it fails to find a new job after
      *                   completing a circuit of all job queues in the pool. Measured in nanoseconds.
-     * @throws IllegalArgumentException if the number of workers is negative.
+     * @throws IllegalArgumentException if the number of workers or the sleep time is negative.
      */
     public Pool(int numWorkers, int sleepNanos) {
 
@@ -59,23 +60,23 @@ public class Pool {
         }
 
         // Make evaluation queues.
-        EvalQueue[] allQueues = new EvalQueue[numWorkers + 1]; // the final "worker" is really the external thread(s)
+        AsyncEvalQueue[] allQueues = new AsyncEvalQueue[numWorkers + 1]; // the final element is the external thread(s)
         for (int index = 0; index < numWorkers + 1; index++) {
-            allQueues[index] = new EvalQueue();
+            allQueues[index] = new AsyncEvalQueue();
         }
 
         // Make evaluation samplers.
-        EvalSampler[] allSamplers = new EvalSampler[numWorkers + 1]; // the final sampler is the external one
+        AsyncEvalSampler[] allSamplers = new AsyncEvalSampler[numWorkers + 1]; // the final sampler is the external one
 
         for (int index = 0; index < numWorkers + 1; index++) {
-            EvalQueue ownQueue = allQueues[index]; // the worker's own queue
-            EvalQueue[] otherQueues = new EvalQueue[numWorkers]; // for stealing from other workers
+            AsyncEvalQueue ownQueue = allQueues[index]; // the worker's own queue
+            AsyncEvalQueue[] otherQueues = new AsyncEvalQueue[numWorkers]; // for stealing from other workers
 
             for (int otherIndex = 0; otherIndex < numWorkers; otherIndex++) {
                 // adding other workers' queues in "cyclic" order (see extended comment below).
                 otherQueues[otherIndex] = allQueues[(index + otherIndex + 1) % (numWorkers + 1)];
             }
-            allSamplers[index] = new EvalSampler(ownQueue, otherQueues, sleepNanos);
+            allSamplers[index] = new AsyncEvalSampler(ownQueue, otherQueues, this, sleepNanos);
         }
 
         // Assign evaluation samplers to workers, and set the workers off.
@@ -85,7 +86,9 @@ public class Pool {
             workerThread.start();
 
             // NB (1) workerThread.join() is never called - termination is by calling the terminate() method.
-            //    (2) There is no need to save references to the workers.
+            //    (2) There is no need to save references to the workers in this Pool object - instead,
+            //        a reference to this Pool object is stored inside the workers, and this reference is used
+            //        by the workers to read the termination status of the pool.
         }
 
         // Save a reference to the external sampler.
@@ -94,8 +97,8 @@ public class Pool {
 
     /*
      ^^^ Note on ordering:
-     The workers are arranged in a circle. (For the purposes of this exercise, the external
-     threads are collectively treated as one single worker, which occupies a single position in the circle.)
+     The workers are arranged in a circle. (For the purposes of this exercise, the external threads are
+     collectively treated as one single worker, which occupies a single position in the circle.)
 
      e.g. If numWorkers = 3, then we have the circle,
           worker-1 -> worker-2 -> worker-3 -> external -> worker-1
@@ -115,32 +118,37 @@ public class Pool {
     }
 
     /**
-     * Sends signal to the pool workers telling them to stop work, once their current jobs are complete.
+     * Sends signal to the pool workers telling them to stop, once their current jobs are complete.
      * (However, external threads will continue processing the jobs in the pool, including stealing from the
      *  internal workers' queues, until these external threads have received the answers to the tasks that they
      *  originally submitted to the pool. This ensures that all external tasks will eventually get completed.)
      *
-     * If the pool has already been terminated by the time this .terminate() call is made, then the terminate call
+     * If the pool has already been terminated by the time this terminate() call is made, then the terminate call
      * has no effect.
      *
-     * Note that this method returns immediately - it does not wait for the pool workers to finish their current jobs.
+     * Note that this method returns immediately - the method call does not wait for the pool workers to finish
+     * their current jobs. Thus, if pool workers are busy when this method is called, the actual time when the
+     * worker threads terminate may be later than the time of the terminate() call.
      */
     public void terminate() {
-        terminated = true;
+        terminationStatus = true;
     }
 
     /**
-     * Submits task to pool, runs the computation defined by the task's compute() method within the pool,
+     * Submits task to pool, runs the computation defined by the task's .compute() method within the pool,
      * and returns the result of the computation once it is available.
      *
      * Note that, in between submitting the task and receiving the answer, the calling thread does not sit idle.
      * Rather, it participates in the activity of the pool, just like any other worker thread in the pool, until
-     * the result of the computation is available. (In particular, the calling thread may steal tasks from other pool
-     * workers.)
+     * the result of the computation is available. (In particular, the calling thread may steal tasks from internal
+     * pool workers, and vice versa.)
      *
-     * This implementation guarantees a happens-before relationship between the calling thread entering the "invoke"
+     * This implementation guarantees a happens-before relationship between the calling thread entering the .invoke()
      * call and the beginning of the computation of the task. It also guarantees a happens-before relationship between
-     * the end of the computation and the calling thread returning from the "invoke" call.
+     * the end of the computation and the calling thread returning from the invoke() call.
+     * (However, it is the user's responsibility to ensure that there is a happens-before relationship between exiting
+     *  the constructor of the pool object and calling pool.invoke(task). This is necessary in order for
+     *  pool.invoke(task) to function correctly.)
      *
      * @param task The task to compute.
      * @param <V> The output type of the task - may be Void if the task does not return a value.
@@ -149,15 +157,16 @@ public class Pool {
      */
     public <V> V invoke (Task<V> task) {
 
-        if (terminated) {
+        if (isTerminated()) {
             throw new IllegalStateException("Cannot receive task - pool has been terminated.");
         }
 
         // Use calling thread as part of pool until the task is complete.
         // So here, we make a global record of the assignment of this thread to the external sampler of this pool.
-        // (Note: If the calling thread was originally part of a different fork-join pool, then it will temporarily
-        //  transfer to this pool until it exits from this invoke method.)
         ThreadManager.setSamplerForThread(externalSampler);
+        // (Note: If the calling thread was originally part of a different fork-join pool, then it will temporarily
+        //  transfer to this pool... until it exits from this invoke method, at which point it will return to its
+        //  previous pool.)
 
         // Begins computation *synchronously*, on the calling thread.
         // (Asynchronous computations only get triggered if the implementation of task.compute() forks sub-tasks
@@ -165,7 +174,7 @@ public class Pool {
         //  they may be stolen by internal pool workers.)
         V answer = task.compute();
 
-        // Once the evaluation is complete, the calling thread then drops out of this pool
+        // Once the evaluation is complete, the calling thread then drops out of this pool.
         // So here, we erase the global record of this thread being assigned to the external sampler of this pool.
         ThreadManager.deleteSamplerForThread();
 

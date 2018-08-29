@@ -67,28 +67,31 @@ public class IncrementEach {
 
         Pool pool = new Pool();
 
-        int numIters = 10;
-        for (int i = 0; i < numIters; i++) {
-            System.out.println("Iteration: " + i);
-            long startTime = System.currentTimeMillis();
-            pool.invoke(fullTask);
-            long endTime = System.currentTimeMillis();
-            System.out.println("Time: " + (endTime - startTime));
-            System.out.println("");
-        }
+        try {
+            int numIters = 10;
+            for (int i = 0; i < numIters; i++) {
+                System.out.println("Iteration: " + i);
+                long startTime = System.currentTimeMillis();
+                pool.invoke(fullTask);
+                long endTime = System.currentTimeMillis();
+                System.out.println("Time: " + (endTime - startTime));
+                System.out.println("");
+            }
 
-        boolean allCorrect = true;
-        for (NumberContainer container : myList) {
-            if (container.getValue() != numIters) {
-                System.out.println("Problem: found " + container.getValue());
-                allCorrect = false;
+            boolean allCorrect = true;
+            for (NumberContainer container : myList) {
+                if (container.getValue() != numIters) {
+                    System.out.println("Problem: found " + container.getValue());
+                    allCorrect = false;
+                }
+            }
+            if (allCorrect) {
+                System.out.println("All correct");
             }
         }
-        if (allCorrect) {
-            System.out.println("All correct");
+        finally {
+            pool.terminate();
         }
-
-        pool.terminate();
     }
 
 }

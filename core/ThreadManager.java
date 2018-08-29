@@ -5,16 +5,17 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-// A static map, recording the assignments of threads to EvalSamplers.
+// A static manager, recording the assignments of threads to EvalSamplers.
 class ThreadManager {
 
-    // This is a global map (not specific to a single pool)
+    // This is a global map (not specific to a single pool).
     // For each thread, we store a "stack" - a history of the evaluation samplers associated with it
     // - see examples in the extended comments at the bottom of this file.
-    private static final Map<Thread, Deque<EvalSampler>> THREADS_TO_SAMPLERS = new ConcurrentHashMap<>();
+    private static final Map<Thread, Deque<AsyncEvalSampler>> THREADS_TO_SAMPLERS = new ConcurrentHashMap<>();
 
-    // Called when a pool worker is initialised, or when an external thread invokes a task to a pool.
-    static void setSamplerForThread(EvalSampler sampler) {
+    // Called when a pool worker is initialised, or when an external thread joins a pool upon submitting a task
+    // to the pool.
+    static void setSamplerForThread(AsyncEvalSampler sampler) {
 
         if (!THREADS_TO_SAMPLERS.keySet().contains(Thread.currentThread())) {
             THREADS_TO_SAMPLERS.put(Thread.currentThread(), new LinkedList<>());
@@ -22,33 +23,32 @@ class ThreadManager {
         THREADS_TO_SAMPLERS.get(Thread.currentThread()).offerLast(sampler);
 
         // So the job sampler associated with the pool that this thread has most recently joined goes to the top of
-        // the stack.
-        // (NB no need to synchronize this method, because the only thread that will ever try to modify the sampler
-        //  assigned to a given thread is itself!)
+        // the stack. (NB no need to use a concurrent deque inside the hashmap, because the only thread that will ever
+        // try to modify the sampler assigned to a given thread is itself!)
     }
 
     // Called when a pool worker is terminated, or when an external thread receives the result of the task it
-    // invoked to a pool and is therefore ready to drop out of this pool.
+    // submitted to a pool and is therefore ready to drop out of this pool.
     static void deleteSamplerForThread() {
 
         THREADS_TO_SAMPLERS.get(Thread.currentThread()).pollLast();
 
-        // So this thread's target sampler is now part of the previous pool that was joined by this thread
-        // ... or if this was the first pool ever joined by this thread, then we now remove this thread from the map:
-
         if (THREADS_TO_SAMPLERS.get(Thread.currentThread()).isEmpty()) {
             THREADS_TO_SAMPLERS.remove(Thread.currentThread());
         }
+
+        // So this thread's target sampler is now part of the previous pool that was joined by this thread
+        // (or if this was the first pool ever joined by this thread, then the thread is no longer in the map).
     }
 
-    // Called during fork/join operations.
-    static EvalSampler getSamplerForThread() {
+    // Called during fork/join operations, to find the correct AsyncEvalSampler to use to dump/find tasks.
+    static AsyncEvalSampler getSamplerForThread() {
 
         if (THREADS_TO_SAMPLERS.keySet().contains(Thread.currentThread())) {
             return THREADS_TO_SAMPLERS.get(Thread.currentThread()).peekLast();
         }
         else {
-            throw new IllegalStateException("Fork/join occurring outside of thread pool.");
+            return null;
         }
     }
 

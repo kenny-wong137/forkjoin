@@ -54,18 +54,22 @@ public class FastSum {
 
         Pool pool = new Pool();
 
-        for (int i = 0; i < 20; i++) {
-            System.out.println("Iteration: " + i);
-            long startTime = System.currentTimeMillis();
-            Long answer = pool.invoke(fullTask);
-            long endTime = System.currentTimeMillis();
+        try {
+            for (int i = 0; i < 25; i++) {
+                System.out.println("Iteration: " + i);
+                long startTime = System.currentTimeMillis();
+                Long answer = pool.invoke(fullTask);
+                long endTime = System.currentTimeMillis();
 
-            System.out.println("Answer: " + answer);
-            System.out.println("Time: " + (endTime - startTime));
-            System.out.println("");
+                System.out.println("Answer: " + answer);
+                System.out.println("Time: " + (endTime - startTime));
+                System.out.println("");
+            }
+        }
+        finally {
+            pool.terminate();
         }
 
-        pool.terminate();
     }
 
 
