@@ -14,7 +14,7 @@ abstract public class Task<V> {
     // (In normal usage, we would only fork a task once and join a task once; however, this implementation does permit
     //  a task to be forked/joined multiple times. The rule here is "last-in-first-out", i.e. the first join call will
     //  retrieve the result of the last fork, and so on.)
-    private Deque<Evaluation<V>> evalAttempts = new ConcurrentLinkedDeque<>();
+    private final Deque<Evaluation<V>> evalAttempts = new ConcurrentLinkedDeque<>();
 
 
     /**
@@ -95,14 +95,13 @@ abstract public class Task<V> {
                     // Case: successfully found another job to work on in the meantime - proceed with computation.
                     evalOfAnotherTask.runComputation();
                 }
-                else {
-                    /*
-                     TODO: Ideally the thread should wait here, until either it is notified that a new evaluation job
-                     has been forked, or until it is notified that the evaluation of the present task is complete.
-                     (At the moment, the thread just goes round and round the while loop, except for the very short
-                      sleeps in the sampler.get() method.)
-                     */
-                }
+
+                /*
+                 IMPROVE: Ideally the thread should wait here, until either it is notified that a new evaluation job
+                 has been forked, or until it is notified that the evaluation of the present task is complete.
+                 (At the moment, the thread just cycles the while loop, broken only by the periodic sleeps in
+                  the sampler.get() method.)
+                 */
             }
 
             // Once the result of the evaluation of the present task is available,

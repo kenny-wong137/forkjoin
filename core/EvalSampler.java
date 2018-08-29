@@ -12,12 +12,13 @@ class EvalSampler {
     // then it tries otherQueues[0], then otherQueues[1], then otherQueues[2], etc.
     private final EvalQueue[] otherQueues;
 
-    private static final int SLEEP_NANOSECONDS = 10000; // period of time to sleep if no tasks found.
+    private final int sleepNanos; // period of time to sleep if no tasks found.
 
 
-    EvalSampler(EvalQueue ownQueue, EvalQueue[] otherQueues) {
+    EvalSampler(EvalQueue ownQueue, EvalQueue[] otherQueues, int sleepNanos) {
         this.ownQueue = ownQueue;
         this.otherQueues = otherQueues;
+        this.sleepNanos = sleepNanos;
     }
 
     // Called when the worker forks a task.
@@ -47,10 +48,10 @@ class EvalSampler {
 
         // No evaluation jobs found anywhere - return null after a brief pause
         try {
-            Thread.sleep(0, SLEEP_NANOSECONDS);
+            Thread.sleep(0, sleepNanos);
         }
         catch (InterruptedException ex) {
-            // ignore this exception - continue as usual
+            // Ignore this exception - continue as usual
         }
         return null;
     }

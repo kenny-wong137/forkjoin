@@ -5,7 +5,7 @@ package core;
 //  a single task.)
 class Evaluation<V> {
 
-    private Task<V> task; // a reference to the description of the task to be evaluated.
+    private final Task<V> task; // a reference to the description of the task to be evaluated.
     private volatile boolean completionStatus = false; // will become true once the evaluation is complete.
     private V answer; // will equal the result of the evaluation once the evaluation is complete
 

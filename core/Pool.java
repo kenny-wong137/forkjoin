@@ -17,27 +17,32 @@ package core;
  * pool worker, until the tasks they submitted are complete, at which point they drop out from the pool. In particular,
  * external threads can steal from the queues owned by internal workers.)
  *
- * WARNING: In the current (very basic!!!) implementation, the workers in the pool start actively searching for jobs to
- * do as soon as the pool is created, and continue actively searching for jobs until the pool is terminated by
- * calling the terminate method. This means that each worker will occupy a CPU constantly from the time the pool is
- * created to the time the pool is terminated.
  */
 public class Pool {
 
-    private EvalSampler externalSampler; // to/from which external threads dump/find tasks
-    private Worker[] workers;
+    private final EvalSampler externalSampler; // to/from which external threads dump/find tasks
+    private final Worker[] workers;
     private volatile boolean terminated = false;
+
+    private static final int DEFAULT_SLEEP_NANOS = 10000; // default sleep time, for threads that can't find new jobs.
 
 
     /**
      * Constructor.
-     * @param numWorkers Number of workers in the pool.
+     * @param numWorkers Number of workers in pool.
+     * @param sleepNanos The period of time for which a thread will sleep, if it fails to find a new job after
+     *                   completing a circuit of all job queues in the pool. Measured in nanoseconds.
      * @throws IllegalArgumentException if the number of workers is negative.
      */
-    public Pool(int numWorkers) {
+    public Pool(int numWorkers, int sleepNanos) {
+
         if (numWorkers < 0) {
-            throw new IllegalArgumentException("Number of workers must be non-negative");
+            throw new IllegalArgumentException("Number of workers must be non-negative.");
             // NB a pool with 0 workers is technically possible - the external thread(s) will do all of the work.
+        }
+
+        if (sleepNanos < 0) {
+            throw new IllegalArgumentException("Sleep time must be non-negative.");
         }
 
         // Make evaluation queues.
@@ -55,7 +60,7 @@ public class Pool {
                 // adding other workers' queues in "cyclic" order (see extended comment below).
                 otherQueues[otherIndex] = allQueues[(index + otherIndex + 1) % (numWorkers + 1)];
             }
-            allSamplers[index] = new EvalSampler(ownQueue, otherQueues);
+            allSamplers[index] = new EvalSampler(ownQueue, otherQueues, sleepNanos);
         }
 
         // Assign evaluation samplers to workers; assign external sampler to the pool.
@@ -80,6 +85,15 @@ public class Pool {
           worker-3 tries worker-3-queue, then external-queue, then worker-1-queue, then worker-2-queue
           external tries external-queue, then worker-1-queue, then worker-2-queue, then worker-3-queue
      */
+
+
+    /**
+     * Constructor - using default sleep time of 10 microseconds.
+     * @param numWorkers Number of workers in pool.
+     */
+    public Pool(int numWorkers) {
+        this(numWorkers, DEFAULT_SLEEP_NANOS);
+    }
 
 
     /**
