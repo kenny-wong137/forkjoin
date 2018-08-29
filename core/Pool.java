@@ -17,6 +17,12 @@ package core;
  * pool worker, until the tasks they submitted are complete, at which point they drop out from the pool. In particular,
  * external threads can steal from the queues owned by internal workers.)
  *
+ * In this implementation, the pool workers are "semi-alive" from the time the pool is initialised to the time the pool
+ * is terminated by calling the terminate method. (In fact, when terminate is called, the workers remain active until
+ * they have finished their current tasks.) To be more specific, the workers will continually look for new jobs to work
+ * on from the job queues. If a worker comes a complete circuit of all job queues and fails to find a job, it sleeps
+ * for a given period of time (currently set to 10 microseconds by default, but can be customised), before starting its
+ * next circuit of the job queues.
  */
 public class Pool {
 
@@ -97,7 +103,7 @@ public class Pool {
 
 
     /**
-     * Terminates the pool, i.e. signals the pool workers to stop work once their current jobs are complete.
+     * Sends signal to the pool workers to stop work, once their current jobs are complete.
      * (However, external threads will continue processing the jobs in the pool, including stealing from the
      *  internal workers' queues, until these external threads have received the answers to the tasks that they
      *  originally submitted to the pool. This ensures that all external tasks will eventually get completed.)
