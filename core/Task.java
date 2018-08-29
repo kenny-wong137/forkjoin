@@ -75,6 +75,7 @@ abstract public class Task<V> {
         // Retrieve an evaluation attempt of this task from the stack of all evaluation attempts of this task
         // that have previously been forked.
         Evaluation<V> evalOfThisTask = evalAttempts.pollLast();
+        EvalSampler sampler = null;
 
         if (evalOfThisTask != null) {
 
@@ -83,7 +84,12 @@ abstract public class Task<V> {
                 // If the result is not yet available, then try to work on another job from the current thread's queue
                 // in the meantime (or if this thread's queue is empty, then try to steal a job from another queues
                 // from within the same pool)
-                Evaluation<?> evalOfAnotherTask = ThreadManager.getSamplerForThread().get();
+
+                if (sampler == null) {
+                    sampler = ThreadManager.getSamplerForThread();
+                }
+
+                Evaluation<?> evalOfAnotherTask = sampler.get();
 
                 if (evalOfAnotherTask != null) {
                     // Case: successfully found another job to work on in the meantime - proceed with computation.
@@ -93,7 +99,8 @@ abstract public class Task<V> {
                     /*
                      TODO: Ideally the thread should wait here, until either it is notified that a new evaluation job
                      has been forked, or until it is notified that the evaluation of the present task is complete.
-                     (At the moment, the thread just goes round and round the while loop.)
+                     (At the moment, the thread just goes round and round the while loop, except for the very short
+                      sleeps in the sampler.get() method.)
                      */
                 }
             }

@@ -26,7 +26,7 @@ public class IncrementEach {
     private static class SumTask extends Task<Void> {
 
         private List<NumberContainer> list;
-        private int MIN_SPLIT_SIZE = 1; // in a more sensible application, this would be higher
+        private int MIN_SPLIT_SIZE = 100000;
 
         SumTask(List<NumberContainer> list) {
             this.list = list;
@@ -34,6 +34,8 @@ public class IncrementEach {
 
         @Override
         public Void compute() {
+
+            System.out.println(Thread.currentThread().getName() + " : list size " + list.size());
 
             if (list.size() == 0) {
                 return null;
@@ -56,7 +58,7 @@ public class IncrementEach {
 
     public static void main(String[] args) {
 
-        List<NumberContainer> myList = IntStream.range(0, 100000000)
+        List<NumberContainer> myList = IntStream.range(0, 10000000)
                 .boxed()
                 .map(i -> new NumberContainer())
                 .collect(Collectors.toList());
@@ -65,12 +67,14 @@ public class IncrementEach {
 
         Pool pool = new Pool(3);
 
-        int numIters = 25;
+        int numIters = 10;
         for (int i = 0; i < numIters; i++) {
+            System.out.println("Iteration: " + i);
             long startTime = System.currentTimeMillis();
             pool.invoke(fullTask);
             long endTime = System.currentTimeMillis();
-            System.out.println(endTime - startTime);
+            System.out.println("Time: " + (endTime - startTime));
+            System.out.println("");
         }
 
         boolean allCorrect = true;

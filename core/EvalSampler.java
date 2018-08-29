@@ -5,12 +5,14 @@ package core;
 class EvalSampler {
 
     // Job queue belonging to current worker
-    private EvalQueue ownQueue;
+    private final EvalQueue ownQueue;
 
     // Job queues owned by other workers, from which the current worker can steal jobs, if its own queue is empty.
     // NB stealing is always attempted in sequential order, i.e. if the worker can't find a job from its ownQueue,
     // then it tries otherQueues[0], then otherQueues[1], then otherQueues[2], etc.
-    private EvalQueue[] otherQueues;
+    private final EvalQueue[] otherQueues;
+
+    private static final int SLEEP_NANOSECONDS = 10000; // period of time to sleep if no tasks found.
 
 
     EvalSampler(EvalQueue ownQueue, EvalQueue[] otherQueues) {
@@ -43,7 +45,13 @@ class EvalSampler {
             }
         }
 
-        // No evaluation jobs found anywhere - return null.
+        // No evaluation jobs found anywhere - return null after a brief pause
+        try {
+            Thread.sleep(0, SLEEP_NANOSECONDS);
+        }
+        catch (InterruptedException ex) {
+            // ignore this exception - continue as usual
+        }
         return null;
     }
 

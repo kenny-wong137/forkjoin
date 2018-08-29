@@ -9,7 +9,7 @@ class EvalQueue {
 
     // Queue of evaluation jobs not yet started - owned by a single worker (or possibly owned collectively by the
     // external threads)
-    private Deque<Evaluation<?>> pendingEvalJobs = new ConcurrentLinkedDeque<>();
+    private final Deque<Evaluation<?>> pendingEvalJobs = new ConcurrentLinkedDeque<>();
 
     // Note: The worker who owns this queue accesses it front from the front. Other workers steal jobs from the back.
 

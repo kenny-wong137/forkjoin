@@ -36,7 +36,8 @@ class Worker implements Runnable {
                 /*
                  TODO: Ideally the thread should wait here, until either it is notified that a new evaluation job has
                  been forked, or until it is notified that the thread-pool has been terminated.
-                 (At the moment, the thread just goes round and round the while loop, occupying a CPU unnecessarily.)
+                 (At the moment, the thread just goes round and round the while loop, except for the very short sleeps
+                 in the sampler.get() method.)
                  */
             }
         }

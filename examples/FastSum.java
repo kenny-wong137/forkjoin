@@ -17,10 +17,13 @@ public class FastSum {
             this.list = list;
         }
 
-        private static final int MIN_SPLIT_SIZE = 1; // in a more sensible application, this would be higher
+        private static final int MIN_SPLIT_SIZE = 100000;
 
         @Override
         public Long compute() {
+
+             System.out.println(Thread.currentThread().getName()
+            + " : " + list.get(0) + " -> " + list.get(list.size() - 1));
 
             if (list.size() == 0) {
                 return 0L;
@@ -46,20 +49,23 @@ public class FastSum {
 
     public static void main(String[] args) {
 
-        List<Integer> myList = IntStream.range(0, 100000000).boxed().collect(Collectors.toList());
+        List<Integer> myList = IntStream.range(0, 10000000).boxed().collect(Collectors.toList());
         SumTask fullTask = new SumTask(myList);
 
-        for (int i = 0; i < 2000; i++) {
+        Pool pool = new Pool(3);
+
+        for (int i = 0; i < 20; i++) {
+            System.out.println("Iteration: " + i);
             long startTime = System.currentTimeMillis();
-            Pool pool = new Pool(3);
             Long answer = pool.invoke(fullTask);
-            pool.terminate();
             long endTime = System.currentTimeMillis();
 
-            System.out.println("Iteration: " + i);
             System.out.println("Answer: " + answer);
             System.out.println("Time: " + (endTime - startTime));
+            System.out.println("");
         }
+
+        pool.terminate();
     }
 
 
