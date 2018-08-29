@@ -9,16 +9,17 @@ package core;
  *   completed the previous job that it was working on, or because it is joining on a job that is not yet complete
  *   and so is looking for another job to get on with in the meantime.
  *
- * If a worker is looking for a new job but its job queue is empty, then it will try to steal jobs from other workers'
- * queues. To avoid contention, workers access their own queues at the front, but steal from other queues at the back.
+ * <p>If a worker is looking for a new job but its job queue is empty, then it will try to steal jobs from other
+ * workers' queues. To avoid contention, workers access their own queues at the front, but steal from other queues
+ * at the back.
  *
- * There is also an external job queue, owned collectively by all the external threads that have submitted tasks to this
- * pool by calling the invoke method. External threads effectively operate as a part of the pool, just like a genuine
- * pool worker, until the tasks they submitted are complete, at which point they drop out from the pool. In particular,
- * external threads can steal from the queues owned by internal workers.
+ * <p>There is also an external job queue, owned collectively by all the external threads that have submitted tasks to
+ * this pool by calling the invoke method. External threads effectively operate as a part of the pool, just like a
+ * genuine pool worker, until the tasks they submitted are complete, at which point they drop out from the pool.
+ * In particular, external threads can steal from the queues owned by internal workers.
  *
- * In this implementation, the pool workers are alive from the time the pool is initialised until the time the pool is
- * terminated by calling the terminate method. Between initialisation and termination, the workers continually cycle
+ * <p>In this implementation, the pool workers are alive from the time the pool is initialised until the time the pool
+ * is terminated by calling the terminate method. Between initialisation and termination, the workers continually cycle
  * through the job queues, looking for new jobs to work on, with the exception that, if a worker comes a complete
  * circuit of all job queues and fails to find a job, it sleeps for a specified period of time (the default time being
  * 10 microseconds), before starting its next circuit of the job queues.
@@ -49,7 +50,6 @@ public class Pool {
      * @throws IllegalArgumentException if the number of workers or the sleep time is negative.
      */
     public Pool(int numWorkers, int sleepNanos) {
-
         if (numWorkers < 0) {
             throw new IllegalArgumentException("Number of workers must be non-negative.");
             // NB a pool with 0 workers is technically possible - the external thread(s) will do all of the work.
@@ -123,10 +123,10 @@ public class Pool {
      *  internal workers' queues, until these external threads have received the answers to the tasks that they
      *  originally submitted to the pool. This ensures that all external tasks will eventually get completed.)
      *
-     * If the pool has already been terminated by the time this terminate() call is made, then the terminate call
+     * <p>If the pool has already been terminated by the time this terminate() call is made, then the terminate call
      * has no effect.
      *
-     * Note that this method returns immediately - the method call does not wait for the pool workers to finish
+     * <p>Note that this method returns immediately - the method call does not wait for the pool workers to finish
      * their current jobs. Thus, if pool workers are busy when this method is called, the actual time when the
      * worker threads terminate may be later than the time of the terminate() call.
      */
@@ -138,12 +138,12 @@ public class Pool {
      * Submits task to pool, runs the computation defined by the task's .compute() method within the pool,
      * and returns the result of the computation once it is available.
      *
-     * Note that, in between submitting the task and receiving the answer, the calling thread does not sit idle.
+     * <p>Note that, in between submitting the task and receiving the answer, the calling thread does not sit idle.
      * Rather, it participates in the activity of the pool, just like any other worker thread in the pool, until
      * the result of the computation is available. (In particular, the calling thread may steal tasks from internal
      * pool workers, and vice versa.)
      *
-     * This implementation guarantees a happens-before relationship between the calling thread entering the .invoke()
+     * <p>This implementation guarantees a happens-before relationship between the calling thread entering the invoke()
      * call and the beginning of the computation of the task. It also guarantees a happens-before relationship between
      * the end of the computation and the calling thread returning from the invoke() call.
      * (However, it is the user's responsibility to ensure that there is a happens-before relationship between exiting
@@ -156,7 +156,6 @@ public class Pool {
      * @return The result of the computation of the task.
      */
     public <V> V invoke (Task<V> task) {
-
         if (isTerminated()) {
             throw new IllegalStateException("Cannot receive task - pool has been terminated.");
         }

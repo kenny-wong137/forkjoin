@@ -22,14 +22,14 @@ abstract public class Task<V> {
      * Computes the result of the evaluation.
      * This method defines the computation, and should be overwritten in subclasses.
      *
-     * The compute() method should only be called from within a pool. Typically, the compute() method carries out the
+     * <p>The compute() method should only be called from within a pool. Typically, the compute() method carries out the
      * computation using a divide-and-conquer approach. If the task is big, then it breaks it down into two sub-tasks.
      * It works on one of the sub-tasks synchronously by directly calling its compute() method.
      * Meanwhile, it sends the other sub-task for asynchronous computation in the pool by calling its
      * fork() method, and obtains the result of this asynchronous computation by calling its join() method.
      * The results of the two sub-tasks are then combined to give a final answer.
      *
-     * (If we're outside of a pool and we wish to submit a task to the pool for computation, then we should NOT call
+     * <p>(If we're outside of a pool and we wish to submit a task to the pool for computation, then we should NOT call
      *  task.compute() directly - instead, we should call pool.invoke(task).)
      *
      * @return The result of the computation.
@@ -40,20 +40,19 @@ abstract public class Task<V> {
     /**
      * Adds this task to the current worker's job queue, to be computed *asynchronously*.
      *
-     * Rules about usage:
+     * <p>Rules about usage:
      * (1) .fork() should only be called from within a fork-join pool.
      * (2) .fork() should not be called more than once on any given task.
      * [On the other hand, there is no limit to how many times .compute() can be called on a given task...]
      *
-     * The implementation guarantees a happens-before relationship between the forking thread entering the .fork() call
-     * and the beginning of the evaluation of the task by the evaluating thread. (This ensures that the evaluating
+     * <p>The implementation guarantees a happens-before relationship between the forking thread entering the .fork()
+     * call and the beginning of the evaluation of the task by the evaluating thread. (This ensures that the evaluating
      * thread sees the most up-to-date version of the data that it is operating on as of the time of the .fork() call.)
      *
      * @throws IllegalStateException if called from outside of a fork-join pool.
      * @throws IllegalStateException if called more than once.
      */
     public void fork() {
-
         // Get the AsyncEvalSampler object for the current thread.
         // Also verify that the current thread is indeed within a fork-join pool.
         AsyncEvalSampler sampler = ThreadManager.getSamplerForThread();
@@ -80,14 +79,14 @@ abstract public class Task<V> {
      * in the meantime (or steal from other workers' queues if its own queue is empty),
      * until the result of the evaluation of this task becomes available.
      *
-     * Rules about usage:
+     * <p>Rules about usage:
      * (1) .join() should only be called from within a fork-join pool
      * (2) .join() should only be called after .fork() has been called on the same task.
      * (3) .join() should only be called from the same fork-join pool as the pool from which .fork() was called
      *      previously.
      * (4) .join() should not be called more than once.
      *
-     * The implementation guarantees a happens-before relationship between the end of the evaluation of the task by
+     * <p>The implementation guarantees a happens-before relationship between the end of the evaluation of the task by
      * the evaluating thread, and the return of the .join() call by the joining thread. (So if the task is merely an
      * action, returning no value, then the results of performing this action are guaranteed to be visible to the
      * joining thread once it has returned from the .join() call. And of course, if the task does return a value,
@@ -100,7 +99,6 @@ abstract public class Task<V> {
      * @return The result of evaluating the task.
      */
     public V join() {
-
         // Retrieve the relevant AsyncEvalSampler object and AsyncEvaluation object.
         // Also verify that the conditions for calling join are met, and record the fact that join() has been called
         // to enable us to prevent a subsequent join() call later on.
@@ -126,7 +124,6 @@ abstract public class Task<V> {
 
         // Loop runs until the result of the evaluation of the task is available.
         while (!evalOfThisTask.isComplete()) {
-
             // If the result is not yet available, then try to work on another job from the current thread's queue
             // in the meantime (or if this thread's queue is empty, then try to steal a job from another queues
             // from within the same pool). (Note that there is a possibility that this other job is in fact the
@@ -138,12 +135,10 @@ abstract public class Task<V> {
                 evalOfAnotherTask.runComputation();
             }
 
-            /*
-             To improve in future: Ideally the thread should wait here, until either it is notified that a new
-             evaluation job has been forked, or until it is notified that the evaluation of the present task is
-             complete. (At the moment, the thread just cycles the while loop, broken only by the periodic sleeps in
-             the sampler.get() method.)
-             */
+             // To improve in future: Ideally the thread should wait here, until either it is notified that a new
+             // evaluation job has been forked, or until it is notified that the evaluation of the present task is
+             // complete. (At the moment, the thread just cycles the while loop, broken only by the periodic sleeps in
+             // the sampler.get() method.)
         }
 
         // AsyncEvaluation of task is now available - return answer.

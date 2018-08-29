@@ -46,7 +46,7 @@ class AsyncEvaluation<V> {
     }
 
     /*
-     Note about happens-before relationships:
+      Note about happens-before relationships:
 
      (1) The forking of the task by the forking thread *happens-before* the evaluation of this AsyncEvaluation job
          by the evaluating thread.

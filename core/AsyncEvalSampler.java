@@ -37,7 +37,6 @@ class AsyncEvalSampler {
     // Also called when a thread is joining on task that hasn't yet completed, and is trying to find a different task
     // to get on with in the meantime.
     AsyncEvaluation<?> get() {
-
         // First, try to get a job from the worker's own queue.
         AsyncEvaluation<?> evalJob = ownQueue.get();
         if (evalJob != null) {
@@ -55,8 +54,7 @@ class AsyncEvalSampler {
         // No evaluation jobs found anywhere - return null after a brief pause
         try {
             Thread.sleep(0, sleepNanos);
-        }
-        catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             // Ignore this exception - continue as usual.
         }
         return null;

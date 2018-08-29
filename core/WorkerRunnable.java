@@ -18,7 +18,6 @@ class WorkerRunnable implements Runnable {
 
     @Override
     public void run() {
-
         // Make a global record of the AsyncEvalSampler object associated with this worker.
         ThreadManager.setSamplerForThread(sampler);
 
@@ -33,12 +32,10 @@ class WorkerRunnable implements Runnable {
                 evalJob.runComputation();
             }
 
-            /*
-             To improve in future: Ideally the thread should wait here, until either it is notified that a new
-             evaluation job has been forked, or until the thread-pool has been terminated.
-             (At the moment, the thread just cycles around the while loop, broken only by the periodic sleeps in
-              the sampler.get() method.)
-             */
+            // To improve in future: Ideally the thread should wait here, until either it is notified that a new
+            // evaluation job has been forked, or until the thread-pool has been terminated.
+            // (At the moment, the thread just cycles around the while loop, broken only by the periodic sleeps in
+            // the sampler.get() method.)
         }
 
         // Once terminated, remove the global record of the AsyncEvalSampler object associated with this worker.
