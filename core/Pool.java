@@ -22,7 +22,7 @@ package core;
  * is terminated by calling the terminate method. Between initialisation and termination, the workers continually cycle
  * through the job queues, looking for new jobs to work on, with the exception that, if a worker comes a complete
  * circuit of all job queues and fails to find a job, it sleeps for a specified period of time (the default time being
- * 10 microseconds), before starting its next circuit of the job queues.
+ * 1 millisecond), before starting its next circuit of the job queues.
  */
 public class Pool {
 
@@ -34,7 +34,7 @@ public class Pool {
 
     // Default duration of sleep
     // - relevant for when a thread fails to find a new job after a completing a full circuit of the queues.
-    private static final int DEFAULT_SLEEP_NANOS = 10000;
+    private static final int DEFAULT_SLEEP_MILLIS = 1;
 
     // Reads the status marker - only called by the internal workers.
     boolean isTerminated() {
@@ -43,19 +43,19 @@ public class Pool {
 
     /**
      * Constructor.
-     * @param numWorkers Number of internal workers in pool. (Typically this will be numProcessors - 1, since the
-     *                   external calling thread also participates in the pool's activity.)
-     * @param sleepNanos The period of time for which a thread will sleep, if it fails to find a new job after
-     *                   completing a circuit of all job queues in the pool. Measured in nanoseconds.
+     * @param numWorkers  Number of internal workers in pool. (Typically this will be numProcessors - 1, since the
+     *                    external calling thread also participates in the pool's activity.)
+     * @param sleepMillis The period of time for which a thread will sleep, if it fails to find a new job after
+     *                    completing a circuit of all job queues in the pool. Measured in milliseconds.
      * @throws IllegalArgumentException if the number of workers or the sleep time is negative.
      */
-    public Pool(int numWorkers, int sleepNanos) {
+    public Pool(int numWorkers, int sleepMillis) {
         if (numWorkers < 0) {
             throw new IllegalArgumentException("Number of workers must be non-negative.");
             // NB a pool with 0 workers is technically possible - the external thread(s) will do all of the work.
         }
 
-        if (sleepNanos < 0) {
+        if (sleepMillis < 0) {
             throw new IllegalArgumentException("Sleep time must be non-negative.");
         }
 
@@ -76,7 +76,7 @@ public class Pool {
                 // adding other workers' queues in "cyclic" order (see extended comment below).
                 otherQueues[otherIndex] = allQueues[(index + otherIndex + 1) % (numWorkers + 1)];
             }
-            allSamplers[index] = new AsyncEvalSampler(ownQueue, otherQueues, this, sleepNanos);
+            allSamplers[index] = new AsyncEvalSampler(ownQueue, otherQueues, this, sleepMillis);
         }
 
         // Assign evaluation samplers to workers, and set the workers off.
@@ -111,10 +111,10 @@ public class Pool {
      */
 
     /**
-     * Constructor - using default pool size of numProcessors - 1 and a default sleep time of 10 microseconds.
+     * Constructor - using default pool size of numProcessors - 1 and a default sleep time of 1 millisecond.
      */
     public Pool() {
-        this(Runtime.getRuntime().availableProcessors() - 1, DEFAULT_SLEEP_NANOS);
+        this(Runtime.getRuntime().availableProcessors() - 1, DEFAULT_SLEEP_MILLIS);
     }
 
     /**
@@ -146,9 +146,12 @@ public class Pool {
      * <p>This implementation guarantees a happens-before relationship between the calling thread entering the invoke()
      * call and the beginning of the computation of the task. It also guarantees a happens-before relationship between
      * the end of the computation and the calling thread returning from the invoke() call.
-     * (However, it is the user's responsibility to ensure that there is a happens-before relationship between exiting
-     *  the constructor of the pool object and calling pool.invoke(task). This is necessary in order for
-     *  pool.invoke(task) to function correctly.)
+     *
+     * <p>In typical usage, only one thread will ever call the invoke() method on a given pool at a given time.
+     * It is technically permissible for invoke() to be called on a single pool from multiple threads simultaneously,
+     * though it is the user's responsibility to ensure that there is a happens-before relationship between the call
+     * of the constructor of the pool object and and the call of the pool's invoke() method. This is required for
+     * correct functioning of the pool.
      *
      * @param task The task to compute.
      * @param <V> The output type of the task - may be Void if the task does not return a value.

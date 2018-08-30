@@ -6,7 +6,7 @@ class AsyncEvaluation<V> {
     // A reference to the task to be evaluated.
     private final Task<V> task;
 
-    // A reference to the fork-join pool used for this evaluation.
+    // A reference to the fork-join pool used for this evaluation (only used for validation purposes).
     private final Pool poolUsed;
 
     // Status of computation - will become true once the evaluation is complete/

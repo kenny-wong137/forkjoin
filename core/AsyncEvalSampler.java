@@ -13,18 +13,18 @@ class AsyncEvalSampler {
     // then it tries otherQueues[0], then otherQueues[1], then otherQueues[2], etc.
     private final AsyncEvalQueue[] otherQueues;
 
-    // Reference to the pool to which this sampler belongs.
+    // Reference to the pool to which this sampler belongs (only used for validation purposes).
     private final Pool pool;
 
     // Period of time to sleep, if no jobs found.
-    private final int sleepNanos;
+    private final long sleepMillis;
 
     // Constructor.
-    AsyncEvalSampler(AsyncEvalQueue ownQueue, AsyncEvalQueue[] otherQueues, Pool pool, int sleepNanos) {
+    AsyncEvalSampler(AsyncEvalQueue ownQueue, AsyncEvalQueue[] otherQueues, Pool pool, int sleepMillis) {
         this.ownQueue = ownQueue;
         this.otherQueues = otherQueues;
         this.pool = pool;
-        this.sleepNanos = sleepNanos;
+        this.sleepMillis = sleepMillis;
     }
 
     // Called when the worker forks a task.
@@ -51,9 +51,9 @@ class AsyncEvalSampler {
             }
         }
 
-        // No evaluation jobs found anywhere - return null after a brief pause
+        // No evaluation jobs found anywhere - return null after a brief sleep.
         try {
-            Thread.sleep(0, sleepNanos);
+            Thread.sleep(sleepMillis);
         } catch (InterruptedException ex) {
             // Ignore this exception - continue as usual.
         }

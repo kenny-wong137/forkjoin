@@ -15,7 +15,7 @@ abstract public class Task<V> {
     // Hence, implicitly, this atomic variable also records whether or not this task has previously been forked.
     private final AtomicReference<AsyncEvaluation<V>> referenceToEvaluation = new AtomicReference<>(null);
 
-    // Marker, indicating whether or not this task has previously been joined.
+    // Marker, indicating whether or not this task has previously been joined (only used for validation purposes).
     private final AtomicBoolean hasBeenJoined = new AtomicBoolean(false);
 
     /**
@@ -35,7 +35,7 @@ abstract public class Task<V> {
      * @return The result of the computation.
      *         (This can be null, with the type V = Void, if the computation is merely an action.)
      */
-    abstract public V compute();
+    abstract protected V compute();
 
     /**
      * Adds this task to the current worker's job queue, to be computed *asynchronously*.

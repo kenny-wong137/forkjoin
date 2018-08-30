@@ -22,8 +22,8 @@ public class FastSum {
         @Override
         public Long compute() {
 
-             System.out.println(Thread.currentThread().getName()
-            + " : " + list.get(0) + " -> " + list.get(list.size() - 1));
+              System.out.println(Thread.currentThread().getName()
+             + " : " + list.get(0) + " -> " + list.get(list.size() - 1));
 
             if (list.size() == 0) {
                 return 0L;
@@ -47,7 +47,7 @@ public class FastSum {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
         List<Integer> myList = IntStream.range(0, 10000000).boxed().collect(Collectors.toList());
         SumTask fullTask = new SumTask(myList);
