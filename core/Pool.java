@@ -147,11 +147,8 @@ public class Pool {
      * call and the beginning of the computation of the task. It also guarantees a happens-before relationship between
      * the end of the computation and the calling thread returning from the invoke() call.
      *
-     * <p>In typical usage, only one thread will ever call the invoke() method on a given pool at a given time.
-     * It is technically permissible for invoke() to be called on a single pool from multiple threads simultaneously,
-     * though it is the user's responsibility to ensure that there is a happens-before relationship between the call
-     * of the constructor of the pool object and and the call of the pool's invoke() method. This is required for
-     * correct functioning of the pool.
+     * <p>In typical usage, only one thread will ever call the invoke() method on a given pool at a given time, though
+     * it is technically permissible for invoke() to be called on a single pool from multiple threads simultaneously.
      *
      * @param task The task to compute.
      * @param <V> The output type of the task - may be Void if the task does not return a value.

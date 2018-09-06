@@ -16,10 +16,14 @@ class ThreadManager {
     // Called when a pool worker is initialised, or when an external thread joins a pool upon submitting a task
     // to the pool.
     static void setSamplerForThread(AsyncEvalSampler sampler) {
-        if (!threadsToSamplers.keySet().contains(Thread.currentThread())) {
-            threadsToSamplers.put(Thread.currentThread(), new LinkedList<>());
-        }
-        threadsToSamplers.get(Thread.currentThread()).offerLast(sampler);
+
+        threadsToSamplers.compute(
+                Thread.currentThread(),
+                (thread, samplerList) -> {
+                    samplerList = (samplerList == null) ? new LinkedList<>() : samplerList;
+                    samplerList.offerLast(sampler);
+                    return samplerList;
+                });
 
         // So the job sampler associated with the pool that this thread has most recently joined goes to the top of
         // the stack. (NB no need to use a concurrent deque inside the hashmap, because the only thread that will ever
@@ -29,10 +33,13 @@ class ThreadManager {
     // Called when a pool worker is terminated, or when an external thread receives the result of the task it
     // submitted to a pool and is therefore ready to drop out of this pool.
     static void deleteSamplerForThread() {
-        threadsToSamplers.get(Thread.currentThread()).pollLast();
-        if (threadsToSamplers.get(Thread.currentThread()).isEmpty()) {
-            threadsToSamplers.remove(Thread.currentThread());
-        }
+
+        threadsToSamplers.compute(
+                Thread.currentThread(),
+                (thread, samplerList) -> {
+                    samplerList.pollLast();
+                    return samplerList.isEmpty() ? null : samplerList;
+                });
 
         // So this thread's target sampler is now part of the previous pool that was joined by this thread
         // (or if this was the first pool ever joined by this thread, then the thread is no longer in the map).
@@ -40,10 +47,13 @@ class ThreadManager {
 
     // Called during fork/join operations, to find the correct AsyncEvalSampler to use to dump/find tasks.
     static AsyncEvalSampler getSamplerForThread() {
-        if (threadsToSamplers.keySet().contains(Thread.currentThread())) {
-            return threadsToSamplers.get(Thread.currentThread()).peekLast();
+
+        Deque<AsyncEvalSampler> samplerList = threadsToSamplers.get(Thread.currentThread());
+
+        if (samplerList != null) {
+            return samplerList.peekLast();
         } else {
-            return null;
+            return null; // calling thread is not in fork-join pool
         }
     }
 
