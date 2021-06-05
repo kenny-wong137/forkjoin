@@ -1,6 +1,8 @@
-package core;
+package forkjoinV1;
 
-// A runnable, describing the way in which an internal pool worker operates during its lifetime.
+/**
+ * The runnable dictating the behaviour of a worker thread during its lifetime
+ */
 class WorkerRunnable implements Runnable {
 
     // Sampler object, used by this worker to dump the asynchronous evaluation jobs that it forks, and to get new
@@ -10,7 +12,6 @@ class WorkerRunnable implements Runnable {
     // Reference to the pool that owns this worker
     private final Pool pool;
 
-    // Constructor.
     WorkerRunnable(AsyncEvalSampler sampler, Pool pool) {
         this.sampler = sampler;
         this.pool = pool;

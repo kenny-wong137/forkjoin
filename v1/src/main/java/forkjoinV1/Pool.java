@@ -1,4 +1,4 @@
-package core;
+package forkjoinV1;
 
 /**
  * My simple implementation of a fork-join pool.
@@ -36,7 +36,6 @@ public class Pool {
     // - relevant for when a thread fails to find a new job after a completing a full circuit of the queues.
     private static final int DEFAULT_SLEEP_MILLIS = 1;
 
-    // Reads the status marker - only called by the internal workers.
     boolean isTerminated() {
         return terminationStatus;
     }
@@ -99,10 +98,8 @@ public class Pool {
      ^^^ Note on ordering:
      The workers are arranged in a circle. (For the purposes of this exercise, the external threads are
      collectively treated as one single worker, which occupies a single position in the circle.)
-
      e.g. If numWorkers = 3, then we have the circle,
           worker-1 -> worker-2 -> worker-3 -> external -> worker-1
-
      Work-retrieval/work-stealing is carried out in cyclic fashion.
      e.g. worker-1 tries worker-1-queue, then worker-2-queue, then worker-3-queue, then external-queue
           worker-2 tries worker-2-queue, then worker-3-queue, then external-queue, then worker-1-queue

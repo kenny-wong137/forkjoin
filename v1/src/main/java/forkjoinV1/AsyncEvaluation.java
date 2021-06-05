@@ -1,6 +1,8 @@
-package core;
+package forkjoinV1;
 
-// An *asynchronous* evaluation of a task, triggered by forking, and to be evaluated in a fork-join pool.
+/**
+ * An *asynchronous* evaluation of a task, triggered by forking, and to be evaluated in a fork-join pool.
+ */
 class AsyncEvaluation<V> {
 
     // A reference to the task to be evaluated.
@@ -18,39 +20,32 @@ class AsyncEvaluation<V> {
     // (NB no need to mark answer as volatile, since answer is always read after a reading
     // the volatile variable completionStatus - see the extended comment below.)
 
-    // Constructor.
     AsyncEvaluation(Task<V> task, Pool poolUsed) {
         this.task = task;
         this.poolUsed = poolUsed;
     }
 
-    // Carries out evaluation.
     void runComputation() {
         answer = task.compute();
         completionStatus = true;
     }
 
-    // Checks whether the computation is complete.
     boolean isComplete() {
         return completionStatus;
     }
 
-    // Retrieves answer - should only be called *after* calling isComplete(), and verifying that isComplete() is true.
     V getAnswer() {
         return answer;
     }
 
-    // Retrieves reference to the pool used for this evaluation.
     Pool getPoolUsed() {
         return poolUsed;
     }
 
     /*
       Note about happens-before relationships:
-
      (1) The forking of the task by the forking thread *happens-before* the evaluation of this AsyncEvaluation job
          by the evaluating thread.
-
          [To spell it out:
          - forking thread entering its fork call
              ... happens-before ...    [due to program order within single thread - see task.fork() implementation]
@@ -60,11 +55,8 @@ class AsyncEvaluation<V> {
              ... happens-before ...    [due to program order within single thread - see worker.run() or task.join()]
          - evaluating thread entering the call of runComputation
          ]
-
-
      (2) The evaluation of this job by the evaluating thread and the recording of the result in this.answer
          *happen-before* the joining of this task by the thread doing the join.
-
          [To spell it out:
          - evaluating thread writing the result of the computation to this.answer
              ... happens-before ...    [due to program order within single thread - see evaluation.runComputation()]

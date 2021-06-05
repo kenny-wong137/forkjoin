@@ -1,11 +1,13 @@
-package core;
+package forkjoinV1;
 
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-// A static manager, recording the assignments of threads to EvalSamplers.
+/**
+ * A static manager, recording the assignments of threads to AsyncEvalSamplers.
+ */
 class ThreadManager {
 
     // This is a global map (not specific to a single pool).
@@ -60,18 +62,15 @@ class ThreadManager {
     /*
      Example execution. At the start of the program, we have:
      threadsToSamplers = {}
-
      Suppose we initialise a pool with 3 workers. We have:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
                           pool-1-worker-3 : [pool-1-sampler-3]}
-
      Then when the main thread invokes a task to this pool, we have:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
                           pool-1-worker-3 : [pool-1-sampler-3],
                           main            : [pool-1-sampler-external]}
-
      Now suppose, during the computation, a second pool is created (with 2 workers). We then have:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
@@ -79,7 +78,6 @@ class ThreadManager {
                           main            : [pool-1-sampler-external],
                           pool-2-worker-1 : [pool-2-sampler-1],
                           pool-2-worker-2 : [pool-2-sampler-2]}
-
      Suppose pool-1-worker-1 invokes a task to pool-2. Then pool-1-worker-1 gets temporarily transferred to pool-2:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1, pool-2-sampler-external],
                           pool-1-worker-2 : [pool-1-sampler-2],
@@ -87,7 +85,6 @@ class ThreadManager {
                           main            : [pool-1-sampler-external],
                           pool-2-worker-1 : [pool-2-sampler-1],
                           pool-2-worker-2 : [pool-2-sampler-2]}
-
      When pool-1-worker-1 receives the result of the task that it invoked to pool-2, it returns to pool-1:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
@@ -95,18 +92,15 @@ class ThreadManager {
                           main            : [pool-1-sampler-external],
                           pool-2-worker-1 : [pool-2-sampler-1],
                           pool-2-worker-2 : [pool-2-sampler-2]}
-
      When pool-2 gets terminated, its workers die, and we have:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
                           pool-1-worker-3 : [pool-1-sampler-3],
                           main            : [pool-1-sampler-external]}
-
      When main receives the result of the task that it invoked, it leaves pool-1. So we have:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
                           pool-1-worker-3 : [pool-1-sampler-3]}
-
      Finally, when main calls terminate on pool-1, we have:
      threadsToSamplers = {}
      */
@@ -115,18 +109,15 @@ class ThreadManager {
      Another example execution. Assume that initially, we have the main thread running plus a non-fork-join thread
      called thread-1. Neither of these are fork-join threads, so we have:
      threadsToSamplers = {}
-
      Suppose we initialise a pool with 3 workers. We would have:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
                           pool-1-worker-3 : [pool-1-sampler-3]}
-
      Then when the main thread invokes a task to this pool, we have:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
                           pool-1-worker-3 : [pool-1-sampler-3],
                           main            : [pool-1-sampler-external]}
-
      Next, the non-fork-join thread thread-1 invokes a different task to this pool. We have:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
@@ -134,20 +125,16 @@ class ThreadManager {
                           main            : [pool-1-sampler-external],
                           thread-1        : [pool-1-sampler-external]}
      (so both main and thread-1 are sharing the external sampler!)
-
      Thread-1 then receives the result of its task:
      threadsToSamplers = {pool-1-worker-1 : [pool-1-sampler-1],
                           pool-1-worker-2 : [pool-1-sampler-2],
                           pool-1-worker-3 : [pool-1-sampler-3],
                           main            : [pool-1-sampler-external]}
-
      Then thread-1 calls terminate on pool-1:
      threadsToSamplers = {main            : [pool-1-sampler-external]}
-
      (Note that, if the evaluation of the task submitted by main relies on completion of sub-tasks that are stuck in
       queues owned by pool-1 workers that were killed, these sub-tasks will eventually be stolen by the main thread,
       ensuring that the full task will eventually reach completion.
-
      Finally, when main receives the result of its task, we have
      threadsToSamplers = {}
      */

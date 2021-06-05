@@ -1,4 +1,4 @@
-package core;
+package forkjoinV2;
 
 /**
  * Task, to be executed by a fork-join {@link Pool}.
@@ -26,7 +26,7 @@ abstract public class Task<V> {
      * (To run the task asynchronously within a {@Pool}, you should instead
      * call {Task#fork()} to schedule it for execution, and call
      * {Task#join()} to obtain the result.)
-     * 
+     *
      * @return result of executing the task
      */
     abstract protected V compute();
@@ -83,7 +83,7 @@ abstract public class Task<V> {
      * The call must happen after the {@link Task#fork()} method has been called,
      * and it must happen from within the same fork-join {@link Pool} where
      * {@link Task#fork()} was called.
-     * 
+     *
      * @return result of executing the task
      */
     public V join() {

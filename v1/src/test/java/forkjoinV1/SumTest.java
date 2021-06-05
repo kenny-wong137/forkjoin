@@ -1,13 +1,13 @@
-package examples;
+package forkjoinV1;
 
-import core.Pool;
-import core.Task;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class FastSum {
+public class SumTest {
 
     private static class SumTask extends Task<Long> {
 
@@ -22,8 +22,8 @@ public class FastSum {
         @Override
         public Long compute() {
 
-              System.out.println(Thread.currentThread().getName()
-             + " : " + list.get(0) + " -> " + list.get(list.size() - 1));
+            System.out.println(Thread.currentThread().getName()
+                    + " : " + list.get(0) + " -> " + list.get(list.size() - 1));
 
             if (list.size() == 0) {
                 return 0L;
@@ -47,9 +47,12 @@ public class FastSum {
         }
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    @Test
+    public void test() {
+        final int highestValue = 10000000;
+        final long realAnswer = (long) highestValue * ((long) highestValue - 1) / 2;
 
-        List<Integer> myList = IntStream.range(0, 10000000).boxed().collect(Collectors.toList());
+        List<Integer> myList = IntStream.range(0, highestValue).boxed().collect(Collectors.toList());
         SumTask fullTask = new SumTask(myList);
 
         Pool pool = new Pool();
@@ -61,16 +64,12 @@ public class FastSum {
                 Long answer = pool.invoke(fullTask);
                 long endTime = System.currentTimeMillis();
 
-                System.out.println("Answer: " + answer);
-                System.out.println("Time: " + (endTime - startTime));
-                System.out.println("");
+                System.out.printf("Answer: %d, Time: %d %n", answer, (endTime - startTime));
+                Assert.assertEquals(realAnswer, answer.longValue());
             }
-        }
-        finally {
+        } finally {
             pool.terminate();
         }
-
     }
-
 
 }

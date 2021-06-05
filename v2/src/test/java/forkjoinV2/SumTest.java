@@ -1,12 +1,12 @@
-package examples;
+package forkjoinV2;
 
-import core.Pool;
-import core.Task;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class FastSum {
+public class SumTest {
 
     private static class SumTask extends Task<Long> {
 
@@ -40,24 +40,12 @@ public class FastSum {
         }
     }
 
-    private static void runSequential(int size, int numIters) {
-        List<Integer> myList = new ArrayList<>();
-        for (int val = 0; val < size; val++) {
-            myList.add(val);
-        }
-        System.out.println("Serial list loaded");
+    @Test
+    public void test() {
+        final int size = 50000000;
+        final int numIters = 20;
+        final int numWorkers = 4;
 
-        for (int iter = 0; iter < numIters; iter++) {
-            long startTime = System.currentTimeMillis();
-            long answer = 0L;
-            for (int val : myList) {
-                answer += val;
-            }
-            System.out.printf("Serial iteration %d: Time = %d%n", iter + 1, System.currentTimeMillis() - startTime);
-        }
-    }
-
-    private static void runParallel(int size, int numIters, int numWorkers) {
         long expectedAns = ((long) size) * ((long) size - 1) / 2;
         List<Integer> myList = new ArrayList<>();
         for (int val = 0; val < size; val++) {
@@ -72,20 +60,12 @@ public class FastSum {
                 SumTask fullTask = new SumTask(myList);
                 long startTime = System.currentTimeMillis();
                 Long answer = pool.invoke(fullTask);
-                if (answer != expectedAns) {
-                    throw new RuntimeException(String.format("Problem: expected %d, actual %d", expectedAns, answer));
-                }
-                System.out.printf("Parallel iteration %d: Time = %d%n",
-                        iter + 1, System.currentTimeMillis() - startTime);
+                Assert.assertEquals(expectedAns, answer.longValue());
+                System.out.printf("Iteration %d: Time = %d%n", iter + 1, System.currentTimeMillis() - startTime);
             }
         } finally {
             pool.terminate();
         }
-    }
-
-    public static void main(String[] args) {
-        runSequential(50000000, 10);
-        runParallel(50000000, 100, 8);
     }
 
 }

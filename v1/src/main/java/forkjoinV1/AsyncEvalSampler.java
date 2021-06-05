@@ -1,8 +1,10 @@
-package core;
+package forkjoinV1;
 
-// An AsyncEvalSampler object either belongs to one single pool worker, or is shared by all the external threads.
-// This object takes care of the way in which its owning thread(s) dumps/finds new asynchronous evaluation jobs,
-// including the possibility of stealing jobs from other threads' queues.
+/**
+ * An AsyncEvalSampler object either belongs to one single pool worker, or is shared by all the external threads.
+ * This object takes care of the way in which its owning thread(s) dumps/finds new asynchronous evaluation jobs,
+ * including the possibility of stealing jobs from other threads' queues.
+ */
 class AsyncEvalSampler {
 
     // Job queue belonging to worker who owns this AsyncEvalSampler object.
@@ -19,7 +21,6 @@ class AsyncEvalSampler {
     // Period of time to sleep, if no jobs found.
     private final long sleepMillis;
 
-    // Constructor.
     AsyncEvalSampler(AsyncEvalQueue ownQueue, AsyncEvalQueue[] otherQueues, Pool pool, int sleepMillis) {
         this.ownQueue = ownQueue;
         this.otherQueues = otherQueues;
@@ -27,15 +28,10 @@ class AsyncEvalSampler {
         this.sleepMillis = sleepMillis;
     }
 
-    // Called when the worker forks a task.
-    // Any new evaluation jobs forked by the current worker go in the worker's own queue.
     void add(AsyncEvaluation<?> evalJob) {
         ownQueue.add(evalJob);
     }
 
-    // Called when a worker is looking for a new task to start after completing its previous one.
-    // Also called when a thread is joining on task that hasn't yet completed, and is trying to find a different task
-    // to get on with in the meantime.
     AsyncEvaluation<?> get() {
         // First, try to get a job from the worker's own queue.
         AsyncEvaluation<?> evalJob = ownQueue.get();
@@ -60,7 +56,6 @@ class AsyncEvalSampler {
         return null;
     }
 
-    // Gets reference to the pool to which this sampler belongs.
     Pool getPool() {
         return pool;
     }

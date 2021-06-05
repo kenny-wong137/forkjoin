@@ -1,4 +1,4 @@
-package core;
+package forkjoinV2;
 
 class Worker extends Thread {
 

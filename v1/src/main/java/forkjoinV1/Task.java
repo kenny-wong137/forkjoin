@@ -1,4 +1,4 @@
-package core;
+package forkjoinV1;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -135,10 +135,10 @@ abstract public class Task<V> {
                 evalOfAnotherTask.runComputation();
             }
 
-             // To improve in future: Ideally the thread should wait here, until either it is notified that a new
-             // evaluation job has been forked, or until it is notified that the evaluation of the present task is
-             // complete. (At the moment, the thread just cycles the while loop, broken only by the periodic sleeps in
-             // the sampler.get() method.)
+            // To improve in future: Ideally the thread should wait here, until either it is notified that a new
+            // evaluation job has been forked, or until it is notified that the evaluation of the present task is
+            // complete. (At the moment, the thread just cycles the while loop, broken only by the periodic sleeps in
+            // the sampler.get() method.)
         }
 
         // AsyncEvaluation of task is now available - return answer.

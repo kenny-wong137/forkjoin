@@ -1,4 +1,4 @@
-package core;
+package forkjoinV2;
 
 import java.util.Deque;
 import java.util.LinkedList;
@@ -16,7 +16,7 @@ import java.util.LinkedList;
  * taking tasks from and adding tasks to the front, and with external threads
  * submitting tasks to the back.
  * <p>
- * All synchronisation is managed by a single lock. 
+ * All synchronisation is managed by a single lock.
  */
 public class Pool {
 
@@ -27,7 +27,7 @@ public class Pool {
 
     /**
      * Fork-join pool
-     * 
+     *
      * @param numWorkers number of worker threads in pool
      */
     public Pool(int numWorkers) {
@@ -65,7 +65,7 @@ public class Pool {
      * Submits external {@link Task} to pool for execution.
      * The thread that calls this method will hang until the task is complete,
      * at which point it will return with the result of the task.
-     * 
+     *
      * @param task external task to submit
      * @return result of completing task
      */

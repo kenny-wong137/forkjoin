@@ -1,10 +1,12 @@
-package core;
+package forkjoinV1;
 
 import java.util.Deque;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-// Manages a worker's pending asynchronous evaluation jobs.
-// (will have one for each worker in pool, plus an extra one used collectively by all external threads.)
+/**
+ * Queue that manages a worker's pending asynchronous evaluation jobs.
+ * (will have one for each worker in pool, plus an extra one used collectively by all external threads.)
+ */
 class AsyncEvalQueue {
 
     // Queue of evaluation jobs not yet started
